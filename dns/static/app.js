@@ -33,6 +33,20 @@
 		});
 	}
 
+	// Quote the hostname as a YAML string, and keep input as text even if it contains markup.
+	const hostname = $('#site-hostname');
+	const example = $('#add-site');
+	if (hostname && example) {
+		const template = example.textContent;
+		const updateExample = () => {
+			const value = hostname.value.trim() || 'app.localhost';
+			example.textContent = template.replace('app.localhost', () => JSON.stringify(value));
+			$('[data-copy-from="add-site"]').textContent = 'Copy';
+		};
+		hostname.addEventListener('input', updateExample);
+		updateExample();
+	}
+
 	// The checks page opens each https site from this browser, which is the only way
 	// to see the Mac's own DNS and whether it trusts the certificate.
 	for (const row of document.querySelectorAll('tr[data-url]')) {

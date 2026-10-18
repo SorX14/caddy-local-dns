@@ -347,9 +347,13 @@ def render(rows, summary=""):
 {table}
 {icons}
 <h2>Add a site</h2>
+<label for="site-hostname">Hostname</label>
+<input type="text" id="site-hostname" value="app.localhost" placeholder="app.localhost"
+	autocomplete="off" spellcheck="false" aria-describedby="site-hostname-help">
+<small id="site-hostname-help">Enter a hostname, such as shop.localhost or app.example.test, without https:// or a path. Leave blank to use app.localhost.</small>
 <ol>
 <li>Open the <code>docker-compose.yml</code> of the project you want to add. Put this in it, changing
-<code>app</code> to your service's name, <code>app.localhost</code> to the address you want, and
+<code>app</code> to your service's name and
 <code>3000</code> to the port your app listens on inside its container.</li>
 {copyable("add-site", ADD_SITE)}
 <li>Restart that project:</li>

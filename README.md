@@ -184,8 +184,9 @@ https://resolver.localhost shows:
 		reads labels and Docker state only, so it does not confirm that Caddy
 		accepted a route. The counts above it cover sites, domains pointed at this
 		Mac, and containers not using Caddy.
-- **Add a site**: a snippet to paste into another project's `docker-compose.yml`,
-	with copy buttons, and the command to restart that project.
+- **Add a site**: enter a hostname to update the snippet, then copy it into
+	another project's `docker-compose.yml`. Copy buttons cover the snippet and
+	the command to restart that project.
 - **Run checks**: see below.
 
 #### Checks
