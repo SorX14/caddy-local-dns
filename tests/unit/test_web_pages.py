@@ -229,7 +229,7 @@ class Render(unittest.TestCase):
     def test_search_box_and_the_toggle_for_other_containers(self):
         page = self.page([container({"caddy": "a.localhost"})])
         self.assertIn('<input type="search" id="filter"', page)
-        self.assertIn('<input type="checkbox" id="show-other" checked>', page)
+        self.assertIn('<input type="checkbox" id="show-other">', page)
 
     def test_scripts_and_styles_come_from_this_server_not_inline(self):
         page = self.page([container({"caddy": "a.localhost"})])

@@ -174,8 +174,8 @@ https://resolver.localhost shows:
 		(or one of this setup's own services) is running and Caddy can reach it. A
 		red cross means it is stopped, restarting, unhealthy, or (for a site) not on
 		the `caddy` network, with the reason underneath. A grey dash means the
-		container doesn't use Caddy, so this tool doesn't check it. Untick **Show
-		containers not using Caddy** to hide those rows.
+		container doesn't use Caddy, so this tool doesn't check it. Those rows are
+		hidden by default; tick **Show containers not using Caddy** to see them.
 	- **Container**: hover the name to see the Compose project's folder on your
 		Mac. The tooltip stays open while you move onto it, with a **Copy path**
 		button, and clicking the name copies the folder too. Containers not started

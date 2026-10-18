@@ -328,7 +328,7 @@ def render(rows, summary=""):
         table = (
             '<div class="toolbar"><input type="search" id="filter" placeholder="Search sites, containers, folders..." '
             'aria-label="Search the table">'
-            '<label><input type="checkbox" id="show-other" checked> Show containers not using Caddy</label>'
+            '<label><input type="checkbox" id="show-other"> Show containers not using Caddy</label>'
             '<small id="count"></small></div>'
             f'<div class="overflow-auto"><table id="routes"><thead><tr>{heads}</tr></thead>'
             f"<tbody>{''.join(render_row(row) for row in rows)}</tbody></table></div>"
