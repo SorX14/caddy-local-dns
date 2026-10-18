@@ -18,6 +18,14 @@
 	margin: 0;
 }
 
+#updated {
+	display: block;
+	margin: -0.5rem 0 1rem;
+	text-align: right;
+	font-size: 0.75rem;
+	color: var(--pico-muted-color);
+}
+
 #updated.stale {
 	color: var(--pico-del-color);
 }

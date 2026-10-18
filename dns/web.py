@@ -333,6 +333,7 @@ def render(rows, summary=""):
             f'<div class="overflow-auto"><table id="routes"><thead><tr>{heads}</tr></thead>'
             f"<tbody>{''.join(render_row(row) for row in rows)}</tbody></table></div>"
             '<p id="no-match" hidden>Nothing matches your search.</p>'
+			'<small id="updated" aria-live="polite">Updates by itself every few seconds.</small>'
         )
     else:
         table = "<p>No containers are running.</p>"
@@ -343,7 +344,7 @@ def render(rows, summary=""):
 <p>What's running, and the sites Caddy serves from container labels.</p>
 </hgroup>
 <h2>What's running</h2>
-<p><span id="summary">{e(summary)}</span> <small id="updated" aria-live="polite">Updates by itself every few seconds.</small></p>
+<p id="summary">{e(summary)}</p>
 {table}
 {icons}
 <h2>Add a site</h2>
