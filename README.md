@@ -1,7 +1,13 @@
 # Caddy reverse proxy (local dev)
 
-Run your Docker apps at easy-to-remember HTTPS addresses on your Mac.
-`.localhost` names work without DNS setup; other domains are added automatically.
+Give your local Docker web apps custom domains and locally trusted HTTPS,
+without publishing a separate host port for each app. Caddy routes requests to
+each app's HTTP endpoint over a shared Docker network and handles TLS for you.
+
+Open `https://shop.localhost` instead of remembering `http://localhost:3000`.
+Your app only needs to listen on its container port; no `ports:` mapping or
+`expose:` entry is needed. `.localhost` names work without DNS setup, and this
+tool configures local DNS automatically for other custom domains on your Mac.
 
 ## Set up
 
