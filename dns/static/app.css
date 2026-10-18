@@ -1,0 +1,90 @@
+/* Small additions to Pico. Served from this origin because the page's CSP forbids inline styles. */
+
+.toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 1.5rem;
+	margin-bottom: 1rem;
+}
+
+.toolbar input[type="search"] {
+	flex: 1 1 18rem;
+	max-width: 28rem;
+	margin: 0;
+}
+
+.toolbar label {
+	margin: 0;
+}
+
+#updated.stale {
+	color: var(--pico-del-color);
+}
+
+tr[hidden] {
+	display: none;
+}
+
+th[data-sort] {
+	cursor: pointer;
+	user-select: none;
+	white-space: nowrap;
+}
+
+th[data-sort][aria-sort="ascending"]::after {
+	content: " \25B2";
+	font-size: 0.7em;
+}
+
+th[data-sort][aria-sort="descending"]::after {
+	content: " \25BC";
+	font-size: 0.7em;
+}
+
+td.uptime {
+	white-space: nowrap;
+}
+
+td svg {
+	display: block;
+}
+
+.tip {
+	cursor: help;
+}
+
+.tip.copy {
+	cursor: copy;
+	text-decoration: underline dotted;
+	text-underline-offset: 0.25em;
+}
+
+#tooltip {
+	position: fixed;
+	z-index: 10;
+	max-width: min(32rem, calc(100vw - 1rem));
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--pico-muted-border-color);
+	border-radius: var(--pico-border-radius);
+	background: var(--pico-card-background-color);
+	box-shadow: var(--pico-card-box-shadow);
+	font-size: 0.875rem;
+}
+
+#tooltip[hidden] {
+	display: none;
+}
+
+#tooltip code {
+	display: block;
+	margin: 0.25rem 0;
+	word-break: break-all;
+	user-select: all;
+}
+
+#tooltip button {
+	margin: 0.25rem 0 0;
+	padding: 0.2rem 0.6rem;
+	font-size: 0.8rem;
+}

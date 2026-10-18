@@ -1,0 +1,6 @@
+{
+	# Issue every certificate from Caddy's local CA; nothing goes to a public ACME server.
+	local_certs
+	# The container can't reach the macOS keychain - `just trust` handles that instead.
+	skip_install_trust
+}

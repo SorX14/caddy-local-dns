@@ -1,0 +1,60 @@
+# Explicit jobs replace GitLab Auto DevOps for this project.
+stages:
+  - lint
+  - build
+
+caddyfile:
+  stage: lint
+  image: caddy:2-alpine
+  script:
+    - caddy validate --config Caddyfile --adapter caddyfile
+    - caddy fmt --diff Caddyfile
+
+justfile:
+  stage: lint
+  image: alpine:3
+  script:
+    - apk add --no-cache just
+    - just --justfile justfile --summary
+
+dns-tests:
+  stage: lint
+  image: python:3-alpine
+  script:
+    - python -B -m unittest discover -t . -s tests/unit
+    - python -B -m unittest discover -t . -s tests/integration
+
+dnsmasq-config:
+  stage: lint
+  image: alpine:3
+  script:
+    - apk add --no-cache dnsmasq
+    - dnsmasq --test --conf-file=dns/dnsmasq.conf
+
+# Publishes an optional DNS_IMAGE for both supported architectures.
+# Does not wait for lint: it builds from ./dns alone.
+dns-image:
+  stage: build
+  needs: []
+  image: docker:27
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE: $CI_REGISTRY_IMAGE/dns
+  before_script:
+    # Wait for the Docker service to become ready.
+    - timeout 60 sh -c 'until docker info >/dev/null 2>&1; do sleep 1; done'
+    # Register QEMU so the other architecture can be built, and use a builder that can do multi-platform.
+    - docker run --privileged --rm tonistiigi/binfmt --install all
+    - docker buildx create --use
+  script:
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+        docker buildx build --platform linux/amd64,linux/arm64 \
+          -t "$IMAGE:latest" -t "$IMAGE:$CI_COMMIT_SHORT_SHA" --push dns
+      else
+        docker buildx build --platform linux/amd64,linux/arm64 dns
+      fi
