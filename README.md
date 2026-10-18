@@ -35,6 +35,10 @@ networks:
 Start your project. Open https://app.localhost; see all sites at https://resolver.localhost.
 Keep both labels: a site name without a directive can break every site.
 
+![Routes page showing example sites, container status, upstream targets and search.](docs/screenshots/routes.png)
+
+Example projects with synthetic data; `docs.localhost` shows a container missing the shared network.
+
 Something not opening? Click **Run checks** on https://resolver.localhost, or run `just doctor` if that page won't load.
 
 From this repo: `just up` starts, `just down` stops, `just ps` shows status, and `just logs` follows logs.
@@ -198,6 +202,8 @@ says how to fix each one:
 - recent errors in Caddy's log, with a hint for the common ones;
 - the `dns` service not answering, and domains missing or left over in
 	`/etc/resolver`.
+
+![Checks page identifying an example container missing the caddy network and explaining how to fix it.](docs/screenshots/checks.png)
 
 The page also tries to open each `https` site from your browser, which is the
 only way to see the Mac's own DNS and certificate trust. A site that fails there
