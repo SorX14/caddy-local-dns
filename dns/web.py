@@ -351,10 +351,13 @@ def render(rows, summary=""):
 <input type="text" id="site-hostname" value="app.localhost" placeholder="app.localhost"
 	autocomplete="off" spellcheck="false" aria-describedby="site-hostname-help">
 <small id="site-hostname-help">Enter a hostname, such as shop.localhost or app.example.test, without https:// or a path. Leave blank to use app.localhost.</small>
+<label for="site-port">Container port</label>
+<input type="number" id="site-port" value="3000" placeholder="3000" min="1" max="65535" step="1"
+	aria-describedby="site-port-help">
+<small id="site-port-help">Use the port your app listens on inside the container (1–65535). Caddy reaches it over the shared Docker network, so you don't need a <code>ports:</code> mapping or an <code>expose:</code> entry. Leave blank to use 3000.</small>
 <ol>
 <li>Open the <code>docker-compose.yml</code> of the project you want to add. Put this in it, changing
-<code>app</code> to your service's name and
-<code>3000</code> to the port your app listens on inside its container.</li>
+<code>app</code> to your service's name.</li>
 {copyable("add-site", ADD_SITE)}
 <li>Restart that project:</li>
 {copyable("restart-cmd", "docker compose up -d")}

@@ -35,15 +35,25 @@
 
 	// Quote the hostname as a YAML string, and keep input as text even if it contains markup.
 	const hostname = $('#site-hostname');
+	const port = $('#site-port');
 	const example = $('#add-site');
-	if (hostname && example) {
+	if (hostname && port && example) {
 		const template = example.textContent;
+		const copyButton = $('[data-copy-from="add-site"]');
 		const updateExample = () => {
+			const valid = port.validity.valid;
+			port.setAttribute('aria-invalid', String(!valid));
+			copyButton.disabled = !valid;
+			copyButton.textContent = 'Copy';
+			if (!valid) return;
 			const value = hostname.value.trim() || 'app.localhost';
-			example.textContent = template.replace('app.localhost', () => JSON.stringify(value));
-			$('[data-copy-from="add-site"]').textContent = 'Copy';
+			const portValue = port.value ? String(port.valueAsNumber) : '3000';
+			example.textContent = template
+				.replace('upstreams 3000', `upstreams ${portValue}`)
+				.replace('app.localhost', () => JSON.stringify(value));
 		};
 		hostname.addEventListener('input', updateExample);
+		port.addEventListener('input', updateExample);
 		updateExample();
 	}
 
