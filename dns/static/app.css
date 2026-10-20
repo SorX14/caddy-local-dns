@@ -62,12 +62,6 @@ td svg {
 	cursor: help;
 }
 
-.tip.copy {
-	cursor: copy;
-	text-decoration: underline dotted;
-	text-underline-offset: 0.25em;
-}
-
 #tooltip {
 	position: fixed;
 	z-index: 10;
@@ -84,15 +78,56 @@ td svg {
 	display: none;
 }
 
-#tooltip code {
-	display: block;
-	margin: 0.25rem 0;
-	word-break: break-all;
-	user-select: all;
+.compose-group th {
+	background: var(--pico-card-sectioning-background-color);
+	border-top: 2px solid var(--pico-muted-border-color);
+	padding-block: 0.4rem;
+	font-size: 0.8rem;
 }
 
-#tooltip button {
-	margin: 0.25rem 0 0;
-	padding: 0.2rem 0.6rem;
-	font-size: 0.8rem;
+.compose-group small {
+	font-weight: normal;
+	overflow-wrap: anywhere;
+}
+
+.group-heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.25rem 1rem;
+}
+
+.group-folder {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	min-width: 0;
+	max-width: 100%;
+	margin-left: auto;
+	text-align: right;
+}
+
+.group-folder small {
+	min-width: 0;
+}
+
+.copy-path {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	margin: 0 0 0 0.25rem;
+	padding: 0;
+	vertical-align: middle;
+	border: 0;
+	background: transparent;
+	color: var(--pico-muted-color);
+}
+
+.copy-path:hover,
+.copy-path:focus-visible {
+	background: var(--pico-secondary-background);
+	color: var(--pico-secondary-inverse);
 }

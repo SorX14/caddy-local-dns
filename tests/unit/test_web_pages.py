@@ -177,7 +177,7 @@ class BuildRows(unittest.TestCase):
         data = json.loads(json.dumps(web.build_rows([container({"caddy": "a.localhost"})])[0]._asdict()))
         self.assertEqual(
             sorted(data),
-            sorted(["kind", "state", "state_label", "name", "link", "container", "project", "target", "problem", "uptime", "uptime_seconds", "directory"]),
+            sorted(["kind", "state", "state_label", "name", "link", "container", "project", "target", "problem", "uptime", "uptime_seconds", "directory", "compose_project", "host"]),
         )
 
 
@@ -202,7 +202,7 @@ class Render(unittest.TestCase):
             self.assertNotIn(bad, page.replace('<script src="/static/app.js" defer></script>', ""))
         self.assertIn("&lt;script&gt;alert(2)&lt;/script&gt;", page)
         self.assertIn('<a href="https://ok.localhost" rel="noreferrer">ok.localhost</a>', page)
-        self.assertIn('data-copy="/tmp/&quot;&gt;&lt;script&gt;alert(3)&lt;/script&gt;"', page)
+        self.assertIn('data-copy-path="/tmp/&quot;&gt;&lt;script&gt;alert(3)&lt;/script&gt;"', page)
 
     def test_wildcard_is_not_a_link(self):
         page = self.page([container({"caddy": "*.wild.dev"})])
@@ -264,9 +264,10 @@ class Render(unittest.TestCase):
         self.assertIn('class="tip" data-tip="Not using Caddy, so this tool doesn&#x27;t check it"', page)
         self.assertIn('title="Not using Caddy, so this tool doesn&#x27;t check it"', page)
 
-    def test_the_container_cell_offers_the_folder_to_copy_only_when_known(self):
+    def test_group_header_offers_the_folder_to_copy_only_when_known(self):
         with_dir = self.page([container(compose("shop", "web", "/Users/me/shop"), name="/shop-web-1")])
-        self.assertIn('class="tip copy" data-tip="/Users/me/shop" data-copy="/Users/me/shop"', with_dir)
+        self.assertIn('class="copy-path" data-copy-path="/Users/me/shop"', with_dir)
+        self.assertNotIn('class="tip copy"', with_dir)
         without = self.page([container({}, name="/lonely-1")])
         self.assertNotIn("tip copy", without)
         self.assertIn("<td>lonely-1</td>", without)
@@ -289,6 +290,42 @@ class Render(unittest.TestCase):
         page = self.page([], [ServiceRow("<b>x</b>", "running", "", 0, "<i>y</i>")])
         self.assertNotIn("<b>x", page)
         self.assertNotIn("<i>y", page)
+
+
+class Grouping(unittest.TestCase):
+	def test_compose_groups_include_all_services_and_separate_checkouts(self):
+		boxes = [
+			container({"caddy": "z.localhost", **compose("shop", "web", "/Users/me/shop")}, name="/web-1"),
+			container(compose("blog", "db", "/Users/me/blog"), name="/blog-db-1"),
+			container(compose("shop", "db", "/Users/me/shop"), name="/shop-db-1"),
+			container(compose("shop", "web", "/Users/me/shop-copy"), name="/copy-web-1"),
+			container({}, name="/standalone-1"),
+		]
+		rows = web.build_rows(boxes)
+		self.assertEqual([row.compose_project for row in rows], ["shop", "blog", "shop", "shop", ""])
+		page = web.render(rows)
+		self.assertEqual(page.count('class="compose-group"'), 4)
+		self.assertLess(page.index('<td>web-1</td>'), page.index('<td>db</td>', page.index('<td>web-1</td>')))
+		self.assertIn('<span>shop <small>· 2 container(s)</small></span>', page)
+		self.assertIn('<span class="group-folder"><small>/Users/me/shop</small>', page)
+		self.assertIn('· 2 container(s)</small>', page)
+		self.assertIn('id="group-compose" checked', page)
+		self.assertIn('Standalone containers', page)
+
+	def test_host_flag_includes_own_sites_but_not_unrelated_services(self):
+		boxes = [
+			container({"caddy": "resolver.localhost"}, name="/stack-dns-web-1"),
+			container(compose("shop", "dns-web"), name="/shop-dns-web-1"),
+		]
+		services = [
+			ServiceRow("dns-web", "running", "", 0, "stack-dns-web-1"),
+			ServiceRow("dns", "not running", "", 0, ""),
+		]
+		rows = web.build_rows(boxes, services=services)
+		self.assertEqual([(row.name, row.host) for row in rows], [
+			("resolver.localhost", True), ("dns", True), ("dns-web", False),
+		])
+		self.assertIn('id="hide-host" checked', web.render(rows))
 
 
 class Icons(unittest.TestCase):

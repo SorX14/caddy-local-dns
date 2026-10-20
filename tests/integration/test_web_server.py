@@ -76,7 +76,7 @@ class Policy(Server):
         self.assertIn("script-src 'self';", policy)
         self.assertIn("style-src 'self' https://cdn.jsdelivr.net;", policy)
         self.assertIn("connect-src 'self';", policy)
-        self.assertIn("img-src data:;", policy)  # Pico's checkbox tick and search icon are data: images
+        self.assertIn("img-src 'self' data:;", policy)  # Pico's checkbox tick and search icon are data: images
         self.assertNotIn("unsafe-inline", policy)
         self.assertNotIn("nonce", policy)
 
@@ -113,7 +113,7 @@ class Api(Server):
 
 class Static(Server):
     def test_serves_the_script_and_stylesheet(self):
-        for name, kind in (("app.js", "text/javascript"), ("app.css", "text/css")):
+        for name, kind in (("app.js", "text/javascript"), ("app.css", "text/css"), ("favicon.svg", "image/svg+xml")):
             status, headers, body = self.fetch(f"/static/{name}")
             self.assertEqual(status, 200)
             self.assertEqual(headers["Content-Type"].split(";")[0], kind)

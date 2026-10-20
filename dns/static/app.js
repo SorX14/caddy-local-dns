@@ -70,7 +70,7 @@
 	const table = $('#routes');
 	if (!table) return;
 
-	// ---- tooltip: stays open while the pointer is on it, so the folder can be selected or copied
+	// ---- status tooltips
 	const tip = el('div', {id: 'tooltip', role: 'tooltip'});
 	tip.hidden = true;
 	document.body.append(tip);
@@ -91,15 +91,7 @@
 		clearTimeout(hideTimer);
 		anchor = target;
 		tip.replaceChildren();
-		if (target.dataset.copy) {
-			const button = el('button', {type: 'button', class: 'secondary', text: 'Copy path'});
-			button.addEventListener('click', async () => {
-				button.textContent = (await copyText(target.dataset.copy)) ? 'Copied' : 'Press Cmd+C';
-			});
-			tip.append(el('div', {text: 'Folder'}), el('code', {text: target.dataset.copy}), button);
-		} else {
-			tip.append(el('div', {text: target.dataset.tip}));
-		}
+		tip.append(el('div', {text: target.dataset.tip}));
 		tip.hidden = false;
 		place(target);
 	}
@@ -132,18 +124,20 @@
 	tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
 	tip.addEventListener('mouseleave', () => hideTip(150));
 	table.addEventListener('click', async (event) => {
-		const target = event.target.closest('.tip.copy');
-		if (!target) return;
-		const ok = await copyText(target.dataset.copy);
-		showTip(target);
-		const button = $('button', tip);
-		if (button) button.textContent = ok ? 'Copied' : 'Press Cmd+C';
+		const button = event.target.closest('button[data-copy-path]');
+		if (!button) return;
+		const ok = await copyText(button.dataset.copyPath);
+		button.setAttribute('aria-label', ok ? 'Path copied' : 'Copy failed');
+		button.title = ok ? 'Path copied' : 'Copy failed';
+		$('#copy-status').textContent = ok ? 'Path copied' : "Couldn't copy. Select the path and press Cmd+C.";
 	});
 
 	// ---- the table: rows come from /api/rows, so it can update without a reload
 	const body = $('tbody', table);
 	const filterBox = $('#filter');
 	const showOther = $('#show-other');
+	const groupCompose = $('#group-compose');
+	const hideHost = $('#hide-host');
 	const count = $('#count');
 	const noMatch = $('#no-match');
 	const summary = $('#summary');
@@ -173,12 +167,7 @@
 		}
 		if (row.problem) name.append(el('br'), el('small', {text: row.problem}));
 
-		const container = el('td');
-		if (row.directory) {
-			container.append(el('span', {class: 'tip copy', 'data-tip': row.directory, 'data-copy': row.directory, tabindex: '0', text: row.container}));
-		} else {
-			container.append(row.container);
-		}
+		const container = el('td', {text: row.container});
 
 		const target = el('td');
 		if (row.target) target.append(el('code', {text: row.target}));
@@ -201,7 +190,7 @@
 		return String(a[key]).localeCompare(String(b[key]), undefined, {numeric: true, sensitivity: 'base'}) * sort.dir;
 	}
 
-	const haystack = (row) => [row.name, row.container, row.project, row.target, row.directory, row.state_label, row.problem, row.uptime].join('\n').toLowerCase();
+	const haystack = (row) => [row.name, row.container, row.project, row.compose_project, row.target, row.directory, row.state_label, row.problem, row.uptime].join('\n').toLowerCase();
 
 	function arrange() {
 		const words = filterBox.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -210,9 +199,43 @@
 		let visible = 0;
 		for (const entry of ordered) {
 			const text = haystack(entry.row);
-			const hidden = (!showOther.checked && entry.row.kind === 'other') || !words.every((word) => text.includes(word));
+			const hidden = (!showOther.checked && entry.row.kind === 'other') || (hideHost.checked && entry.row.host) || !words.every((word) => text.includes(word));
 			entry.tr.hidden = hidden;
 			if (!hidden) visible += 1;
+		}
+		for (const header of body.querySelectorAll('.compose-group')) header.remove();
+		if (groupCompose.checked) {
+			const groups = new Map();
+			for (const entry of ordered) {
+				const row = entry.row;
+				const key = JSON.stringify(row.compose_project ? [row.compose_project, row.directory] : ['', '']);
+				if (!groups.has(key)) groups.set(key, []);
+				groups.get(key).push(entry);
+			}
+			ordered = [];
+			const keys = [...groups.keys()].sort((a, b) => {
+				const [projectA, dirA] = JSON.parse(a);
+				const [projectB, dirB] = JSON.parse(b);
+				return Number(!projectA) - Number(!projectB) || projectA.localeCompare(projectB) || dirA.localeCompare(dirB);
+			});
+			for (const key of keys) {
+				const members = groups.get(key);
+				const shown = members.filter((entry) => !entry.tr.hidden);
+				if (shown.length) {
+					const [project, directory] = JSON.parse(key);
+					const containers = new Set(shown.map(({row}) => row.container || row.name)).size;
+					const info = el('span', {text: project || 'Standalone containers'}, el('small', {text: ` · ${containers} container(s)`}));
+					const layout = el('div', {class: 'group-heading'}, info);
+					const heading = el('th', {scope: 'rowgroup', colspan: '6'}, layout);
+					if (project && directory) {
+						const button = $('#copy-path-icon').content.firstElementChild.cloneNode(true);
+						button.dataset.copyPath = directory;
+						layout.append(el('span', {class: 'group-folder'}, el('small', {text: directory}), button));
+					}
+					ordered.push({tr: el('tr', {class: 'compose-group'}, heading)});
+				}
+				ordered.push(...members);
+			}
 		}
 		const current = Array.from(body.children);
 		if (ordered.some((entry, i) => current[i] !== entry.tr)) body.append(...ordered.map((entry) => entry.tr));
@@ -282,6 +305,8 @@
 
 	filterBox.addEventListener('input', arrange);
 	showOther.addEventListener('change', arrange);
+	groupCompose.addEventListener('change', arrange);
+	hideHost.addEventListener('change', arrange);
 
 	// ---- keeping it fresh
 	let busy = false;

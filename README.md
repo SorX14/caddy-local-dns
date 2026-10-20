@@ -1,13 +1,14 @@
-# Caddy reverse proxy (local dev)
+# Local HTTPS for Docker projects
 
-Give your local Docker web apps custom domains and locally trusted HTTPS,
-without publishing a separate host port for each app. Caddy routes requests to
-each app's HTTP endpoint over a shared Docker network and handles TLS for you.
+Run multiple Docker Compose projects on your Mac, each with its own custom
+domains and locally trusted HTTPS. Caddy discovers your apps from container
+labels, routes requests to the right project, and handles TLS automatically.
 
-Open `https://shop.localhost` instead of remembering `http://localhost:3000`.
-Your app only needs to listen on its container port; no `ports:` mapping or
-`expose:` entry is needed. `.localhost` names work without DNS setup, and this
-tool configures local DNS automatically for other custom domains on your Mac.
+Open `https://shop.localhost` or `https://blog.localhost` while both projects
+run side by side. Your apps can all listen on the same container port without
+publishing separate host ports or maintaining proxy configuration by hand.
+`.localhost` names work without DNS setup; this tool also configures local DNS
+automatically for other custom domains on your Mac.
 
 ## Set up
 
@@ -41,9 +42,12 @@ networks:
 Start your project. Open https://app.localhost; see all sites at https://resolver.localhost.
 Keep both labels: a site name without a directive can break every site.
 
-![Routes page showing example sites, container status, upstream targets and search.](docs/screenshots/routes.png)
+![Routes page grouping example containers by Compose project, with folder copy buttons and host containers hidden.](docs/screenshots/routes.png)
 
-Example projects with synthetic data; `docs.localhost` shows a container missing the shared network.
+Containers from the same Compose project appear together, with a button to copy
+the project folder. Grouping and **Hide host containers** are on by default.
+These examples use synthetic data; `docs.localhost` shows a container missing
+the shared network.
 
 Something not opening? Click **Run checks** on https://resolver.localhost, or run `just doctor` if that page won't load.
 
@@ -176,10 +180,15 @@ https://resolver.localhost shows:
 		the `caddy` network, with the reason underneath. A grey dash means the
 		container doesn't use Caddy, so this tool doesn't check it. Those rows are
 		hidden by default; tick **Show containers not using Caddy** to see them.
-	- **Container**: hover the name to see the Compose project's folder on your
-		Mac. The tooltip stays open while you move onto it, with a **Copy path**
-		button, and clicking the name copies the folder too. Containers not started
-		by Docker Compose have no folder to show.
+	- **Compose groups**: **Group by Compose project** is on by default, keeping
+		services from the same project together. Each group header shows its folder
+		and a small copy icon to copy that path. Projects with the same name in
+		different folders stay separate. Turn grouping off for a flat table.
+	- **Host containers**: **Hide host containers** is on by default, hiding this
+		setup's Caddy and DNS containers, including the routes page itself. Untick it
+		to show them. It works in both grouped and flat views.
+	- **Container**: the Docker container name. Containers not started by Docker
+		Compose appear in a **Standalone containers** group and have no folder to copy.
 	- **Search and sort**: the search box matches any column, including the folder
 		and the reason. Click a column heading to sort, again to reverse, and a
 		third time to go back to the default order. Your search and sort are kept as

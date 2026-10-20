@@ -27,7 +27,7 @@ PORT = int(os.environ.get("WEB_PORT", "8080"))
 CADDY_NETWORK = os.environ.get("CADDY_NETWORK", "caddy")
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-STATIC_TYPES = {"app.js": "text/javascript", "app.css": "text/css"}
+STATIC_TYPES = {"app.js": "text/javascript", "app.css": "text/css", "favicon.svg": "image/svg+xml"}
 
 ADD_SITE = """services:
   app:
@@ -51,7 +51,7 @@ def csp(extra_connect=""):
     injected script or style attribute can't run. `extra_connect` widens fetch()."""
     return (
         "default-src 'none'; style-src 'self' https://cdn.jsdelivr.net; script-src 'self'; "
-        "img-src data:; "  # Pico draws its checkmark and search icon as data: images
+        "img-src 'self' data:; "  # Pico draws its checkmark and search icon as data: images
         f"connect-src 'self' {extra_connect}".rstrip()
         + "; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
     )
@@ -159,45 +159,55 @@ class Row(NamedTuple):
     uptime: str
     uptime_seconds: int
     directory: str
+    compose_project: str = ""
+    host: bool = False
 
 
 def build_rows(containers, details=None, services=None, now=None):
-    """Every running container as table rows: its Caddy sites if it has any, a
-    row of its own if it is one of this setup's services, otherwise a single
-    grey row, since this tool doesn't look after containers Caddy doesn't proxy."""
-    rows = []
-    site_routes = routes(containers, details, now)
-    for route in site_routes:
-        rows.append(Row(
-            "site", "fail" if route.problem else "ok", route.problem or SITE_OK, route.address, route.link,
-            route.container, route.project, route.target, route.problem, route.uptime, route.seconds, route.directory,
-        ))
-    site_containers = {route.container for route in site_routes}
+	"""Every running container as table rows: its Caddy sites if it has any, a
+	row of its own if it is one of this setup's services, otherwise a single
+	grey row, since this tool doesn't look after containers Caddy doesn't proxy."""
+	rows = []
+	site_routes = routes(containers, details, now)
+	for route in site_routes:
+		rows.append(Row(
+			"site", "fail" if route.problem else "ok", route.problem or SITE_OK, route.address, route.link,
+			route.container, route.project, route.target, route.problem, route.uptime, route.seconds, route.directory,
+		))
+	site_containers = {route.container for route in site_routes}
 
-    service_containers = set()
-    for service in services or []:
-        service_containers.add(service.container)
-        if service.container and service.container in site_containers:
-            continue
-        ok = service.status == "running"
-        label = "Running" if ok else service.status.capitalize()
-        rows.append(Row(
-            "service", "ok" if ok else "fail", label, service.service, None, service.container,
-            service.project, "", "" if ok else label, service.uptime, service.seconds, service.directory,
-        ))
+	service_containers = set()
+	for service in services or []:
+		service_containers.add(service.container)
+		if service.container and service.container in site_containers:
+			continue
+		ok = service.status == "running"
+		label = "Running" if ok else service.status.capitalize()
+		rows.append(Row(
+			"service", "ok" if ok else "fail", label, service.service, None, service.container,
+			service.project, "", "" if ok else label, service.uptime, service.seconds, service.directory,
+		))
 
-    for container in sorted(containers, key=container_name):
-        name = container_name(container)
-        if name in site_containers or name in service_containers:
-            continue
-        labels = container.get("Labels") or {}
-        uptime, seconds = uptime_of(container, details, now)
-        rows.append(Row(
-            "other", "none", NOT_CADDY, labels.get(diagnostics.COMPOSE + "service") or name, None, name,
-            diagnostics.compose_project(labels), "", "", uptime, seconds,
-            labels.get(diagnostics.COMPOSE + "project.working_dir", ""),
-        ))
-    return rows
+	for container in sorted(containers, key=container_name):
+		name = container_name(container)
+		if name in site_containers or name in service_containers:
+			continue
+		labels = container.get("Labels") or {}
+		uptime, seconds = uptime_of(container, details, now)
+		rows.append(Row(
+			"other", "none", NOT_CADDY, labels.get(diagnostics.COMPOSE + "service") or name, None, name,
+			diagnostics.compose_project(labels), "", "", uptime, seconds,
+			labels.get(diagnostics.COMPOSE + "project.working_dir", ""),
+		))
+	# Keep the project separate from the display value (project/service).
+	projects = {
+		container_name(container): (container.get("Labels") or {}).get(diagnostics.COMPOSE + "project", "")
+		for container in containers
+	}
+	for service in services or []:
+		if service.container not in projects and "/" in service.project:
+			projects[service.container] = service.project.rsplit("/", 1)[0]
+	return [row._replace(compose_project=projects.get(row.container, ""), host=row.kind == "service" or row.container in service_containers) for row in rows]
 
 
 def summarise(rows, domains=None):
@@ -269,6 +279,7 @@ def page(title, body):
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>{html.escape(title)}</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
 <link rel="stylesheet" href="/static/app.css">
 </head>
@@ -311,9 +322,6 @@ def render_row(row):
     if row.problem:
         name += f"<br><small>{e(row.problem)}</small>"
     container = e(row.container)
-    if row.directory:
-        path = e(row.directory)
-        container = f'<span class="tip copy" data-tip="{path}" data-copy="{path}" title="{path}" tabindex="0">{container}</span>'
     target = f"<code>{e(row.target)}</code>" if row.target else ""
     return (
         f"<tr><td>{state}</td><td>{name}</td><td>{container}</td><td>{e(row.project)}</td>"
@@ -321,25 +329,57 @@ def render_row(row):
     )
 
 
-def render(rows, summary=""):
-    e = html.escape
-    heads = "".join(f'<th scope="col" data-sort="{key}" tabindex="0" aria-sort="none">{label}</th>' for key, label in COLUMNS)
-    if rows:
-        table = (
-            '<div class="toolbar"><input type="search" id="filter" placeholder="Search sites, containers, folders..." '
-            'aria-label="Search the table">'
-            '<label><input type="checkbox" id="show-other"> Show containers not using Caddy</label>'
-            '<small id="count"></small></div>'
-            f'<div class="overflow-auto"><table id="routes"><thead><tr>{heads}</tr></thead>'
-            f"<tbody>{''.join(render_row(row) for row in rows)}</tbody></table></div>"
-            '<p id="no-match" hidden>Nothing matches your search.</p>'
-			'<small id="updated" aria-live="polite">Updates by itself every few seconds.</small>'
-        )
-    else:
-        table = "<p>No containers are running.</p>"
-    icons = "".join(f'<template data-icon="{kind}">{icon(kind, "", titled=False)}</template>' for kind in ("ok", "fail", "none"))
+def copy_path_button(directory=""):
+	return (
+		f'<button type="button" class="copy-path" data-copy-path="{html.escape(directory)}" '
+		'aria-label="Copy folder path" title="Copy folder path">'
+		'<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" '
+		'stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">'
+		'<rect x="5.5" y="5.5" width="8" height="8" rx="1"/>'
+		'<path d="M10.5 5.5v-3h-8v8h3"/></svg></button>'
+	)
 
-    body = f"""<hgroup>
+
+def grouped_rows(rows):
+	"""Group a Compose project's services, distinguishing checkouts by folder."""
+	groups = {}
+	for row in rows:
+		key = (row.compose_project, row.directory) if row.compose_project else ("", "")
+		groups.setdefault(key, []).append(row)
+	parts = []
+	for (project, directory), members in sorted(groups.items(), key=lambda item: (not item[0][0], item[0])):
+		label = html.escape(project or "Standalone containers")
+		folder = f'<span class="group-folder"><small>{html.escape(directory)}</small>{copy_path_button(directory)}</span>' if project and directory else ""
+		count = len({row.container or row.name for row in members})
+		parts.append(
+			'<tr class="compose-group"><th scope="rowgroup" colspan="6"><div class="group-heading">'
+			f'<span>{label} <small>· {count} container(s)</small></span>{folder}</div></th></tr>'
+		)
+		parts.extend(render_row(row) for row in members)
+	return "".join(parts)
+
+
+def render(rows, summary=""):
+	e = html.escape
+	heads = "".join(f'<th scope="col" data-sort="{key}" tabindex="0" aria-sort="none">{label}</th>' for key, label in COLUMNS)
+	if rows:
+		table = (
+			'<div class="toolbar"><input type="search" id="filter" placeholder="Search sites, containers, folders..." '
+			'aria-label="Search the table">'
+			'<label><input type="checkbox" id="show-other"> Show containers not using Caddy</label>'
+			'<label><input type="checkbox" id="group-compose" checked> Group by Compose project</label>'
+			'<label><input type="checkbox" id="hide-host" checked> Hide host containers</label>'
+			'<small id="count"></small><small id="copy-status" role="status"></small></div>'
+			f'<div class="overflow-auto"><table id="routes"><thead><tr>{heads}</tr></thead>'
+			f"<tbody>{grouped_rows(rows)}</tbody></table></div>"
+			'<p id="no-match" hidden>Nothing matches your search.</p>'
+			'<small id="updated" aria-live="polite">Updates by itself every few seconds.</small>'
+		)
+	else:
+		table = "<p>No containers are running.</p>"
+	icons = "".join(f'<template data-icon="{kind}">{icon(kind, "", titled=False)}</template>' for kind in ("ok", "fail", "none"))
+
+	body = f"""<hgroup>
 <h1>Routes</h1>
 <p>What's running, and the sites Caddy serves from container labels.</p>
 </hgroup>
@@ -347,6 +387,7 @@ def render(rows, summary=""):
 <p id="summary">{e(summary)}</p>
 {table}
 {icons}
+<template id="copy-path-icon">{copy_path_button()}</template>
 <h2>Add a site</h2>
 <label for="site-hostname">Hostname</label>
 <input type="text" id="site-hostname" value="app.localhost" placeholder="app.localhost"
@@ -369,7 +410,7 @@ send it to your container. Keep the <code>caddy.reverse_proxy</code> line, becau
 <h2>Something not working?</h2>
 <form method="get" action="/diagnose"><button type="submit">Run checks</button></form>
 <p><small>If this page itself won't load, run <code>just doctor</code> in a terminal instead.</small></p>"""
-    return page("Routes", body)
+	return page("Routes", body)
 
 
 CHECK_LABELS = {"ok": "OK", "warn": "Warning", "fail": "Problem", "info": "Note"}

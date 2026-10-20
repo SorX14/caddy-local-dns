@@ -18,3 +18,5 @@
 - Python tests live in `tests/unit` (fast, everything faked) and `tests/integration` (real sockets, subprocesses or HTTP on localhost), with shared builders in `tests/support.py`. Run them with `just test`, or `just test unit` / `just test integration`. Put new tests in the matching group, and don't add tests under `dns/`, which is the Docker build context.
 
 - The routes page's JavaScript and CSS live in `dns/static/` and are served from this origin. Don't add inline `<script>`, `<style>` or `style=` to the HTML: the page's Content-Security-Policy forbids them. Anything that comes from a container (names, labels, paths) must be HTML-escaped in `dns/web.py` and set as text, never HTML, in `dns/static/app.js`. The browser behaviour isn't covered by `just test`; check it by serving `dns/web.py` with fake Docker data and driving it in a browser.
+
+- When changing the UI, update any affected documentation images in `docs/screenshots/` so they match the current interface. Use synthetic data for every screenshot.
